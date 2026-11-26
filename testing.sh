@@ -41,6 +41,14 @@ choose_duration() {
 
 EOF
 
+echo
+echo "A few suggestions to increase your wpm:"
+echo
+echo "  1. Enlarge your text in the edior"
+echo "  2. Sit in a comfortable position"
+echo "  3. Use a keyboard you are comfortable with"
+echo "  4. Remove any distracting elements if you can"
+
     echo
     echo "How long do you wanna type for?"
     echo
@@ -92,11 +100,6 @@ draw_text() {
     row=5
     col=1
 
-    # clear previous text
-    for ((i=0; i<drawn_lines; i++)); do
-        printf '\033[%d;1H\033[2K' "$((5+i))"
-    done
-
     for ((i=0; i<${#target}; i++)); do
 
         # move to next line if needed
@@ -105,23 +108,26 @@ draw_text() {
             col=1
         fi
 
-        # position cursor
-        printf '\033[%d;%dH' "$row" "$col"
-
+        # only redraw characters that have changed
         if (( i < ${#typed} )); then
 
             if [[ ${typed:i:1} == "${target:i:1}" ]]; then
-                printf '%b%s%b' "$GREEN" "${target:i:1}" "$RESET"
+                color="$GREEN"
             else
-                printf '%b%s%b' "$RED" "${target:i:1}" "$RESET"
+                color="$RED"
             fi
 
         elif (( i == ${#typed} )); then
-            printf '%b%s%b' "$YELLOW" "${target:i:1}" "$RESET"
+            color="$YELLOW"
 
         else
-            printf '%b%s%b' "$GRAY" "${target:i:1}" "$RESET"
+            color="$GRAY"
         fi
+
+        # position cursor
+        printf '\033[%d;%dH' "$row" "$col"
+
+        printf '%b%s%b' "$color" "${target:i:1}" "$RESET"
 
         ((col++))
 
