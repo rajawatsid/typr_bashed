@@ -110,7 +110,7 @@ update_input() {
 }
 
 
-# gmame
+# game
 
 choose_duration
 
@@ -118,14 +118,14 @@ clear
 
 echo "Type the sentence below!"
 echo
-
-draw_text
-echo
-
 echo "Timer starts with your first keypress."
 
 # wait for first keypress
 IFS= read -rsn1 key
+
+# NOW draw the sentence
+echo
+draw_text
 
 # start timer
 start_time=$SECONDS
