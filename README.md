@@ -9,8 +9,8 @@ first we will make a set word and then it should type using that.
 ## some sources
 Got the word list using:
 ```
-curl -L https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english.txt \
-    -o english.txt
+curl -L https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-no-swears.txt \
+    -o words/english.txt
 ```
 
 ## file structure to make
