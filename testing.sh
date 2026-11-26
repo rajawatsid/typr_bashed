@@ -93,6 +93,7 @@ check_words() {
     fi
 }
 
+
 # text comes out
 draw_text() {
 
@@ -102,15 +103,23 @@ draw_text() {
 
     for ((i=0; i<${#target}; i++)); do
 
+        char="${target:i:1}"
+
         # move to next line if needed
-        if (( col > cols )); then
-            ((row++))
-            col=1
+        if [[ $char == " " ]]; then
+
+            next_word="${target:i+1}"
+            next_word="${next_word%% *}"
+
+            if (( col + ${#next_word} > cols )); then
+                ((row++))
+                col=1
+                continue
+            fi
+
         fi
 
         # only redraw characters that have changed
-        char="${target:i:1}"
-
         if (( i < ${#typed} )); then
 
             if [[ ${typed:i:1} == "${target:i:1}" ]]; then
@@ -137,11 +146,17 @@ draw_text() {
 
         ((col++))
 
+        if (( col > cols )); then
+            ((row++))
+            col=1
+        fi
+
     done
 
     drawn_lines=$((row - 5 + 1))
 
 }
+
 
 
 # times
