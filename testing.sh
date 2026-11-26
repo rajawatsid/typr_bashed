@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
 
 
-target="the quick brown fox jumps over the lazy dog"
+WORD_FILE="$(dirname "$0")/words/english.txt"
+
+target=""
 typed=""
+
+drawn_lines=0
+
+# for how many word to add at once
+WORDS_TO_ADD=30
+
 
 duration=0
 start_time=0
@@ -15,6 +23,10 @@ RED='\e[1;91m'
 YELLOW='\e[1;93m'
 GRAY='\e[1;90m'
 RESET='\e[0m'
+
+
+# put the cursor back if game gets interrupted
+trap 'printf "\033[?25h\n"; exit' INT TERM
 
 
 # duration thingy
@@ -52,40 +64,70 @@ EOF
 }
 
 
-# text comes out
 
+# for more words  in target
+add_words() {
+    new_words=$(shuf -n "$WORDS_TO_ADD" "$WORD_FILE" | paste -sd ' ' -)
+
+    if [[ -z $target ]]; then
+        target="$new_words"
+    else
+        target+=" $new_words"
+    fi
+}
+
+# for more check wordings
+check_words() {
+    remaining=$((${#target} - ${#typed}))
+
+    if (( remaining < 100 )); then
+        add_words
+    fi
+}
+
+# text comes out
 draw_text() {
 
-    # go to the sentence line
-    printf '\033[5;1H'
-    printf '\033[2K'
+    cols=$(($(tput cols) - 2))
+    row=5
+    col=1
+
+    # clear previous text
+    for ((i=0; i<drawn_lines; i++)); do
+        printf '\033[%d;1H\033[2K' "$((5+i))"
+    done
 
     for ((i=0; i<${#target}; i++)); do
 
+        # move to next line if needed
+        if (( col > cols )); then
+            ((row++))
+            col=1
+        fi
+
+        # position cursor
+        printf '\033[%d;%dH' "$row" "$col"
+
         if (( i < ${#typed} )); then
 
-            # correctly typed
             if [[ ${typed:i:1} == "${target:i:1}" ]]; then
-                printf "${GREEN}%s${RESET}" "${target:i:1}"
-
-            # incorrectly typed
+                printf '%b%s%b' "$GREEN" "${target:i:1}" "$RESET"
             else
-                printf "${RED}%s${RESET}" "${target:i:1}"
+                printf '%b%s%b' "$RED" "${target:i:1}" "$RESET"
             fi
 
         elif (( i == ${#typed} )); then
-
-            # current character
-            printf "${YELLOW}%s${RESET}" "${target:i:1}"
+            printf '%b%s%b' "$YELLOW" "${target:i:1}" "$RESET"
 
         else
-
-            # upcoming characters
-            printf "${GRAY}%s${RESET}" "${target:i:1}"
-
+            printf '%b%s%b' "$GRAY" "${target:i:1}" "$RESET"
         fi
 
+        ((col++))
+
     done
+
+    drawn_lines=$((row - 5 + 1))
 
 }
 
@@ -100,7 +142,7 @@ draw_timer() {
     (( remaining < 0 )) && remaining=0
 
     # timer goes on the third line
-    printf '\033[7;1H'
+    printf '\033[3;1H'
     printf '\033[2K'
     printf "Time left: %s seconds" "$remaining"
 
@@ -118,19 +160,27 @@ update_input() {
     elif [[ -z $key ]]; then
         return
 
-    else
+    elif [[ $key == $'\e' ]]; then
+        read -rsn2 -t 0.01 _
+        return
+
+    elif (( ${#typed} < ${#target} )); then
         typed+="$key"
     fi
 
 }
 
+check_words
 
-# to clear terminal and start from the top
+
 printf '\033[H\033[2J'
 
 choose_duration
 
 printf '\033[H\033[2J'
+
+# hide cursor while playing
+printf '\033[?25l'
 
 echo "Type the sentence below!"
 echo
@@ -148,7 +198,7 @@ IFS= read -rsn1 key
 start_time=$SECONDS
 
 update_input
-
+check_words
 draw_text
 draw_timer
 
@@ -165,7 +215,7 @@ while true; do
     if IFS= read -rsn1 -t 1 key; then
 
         update_input
-
+        check_words
         # redraw sentence
         draw_text
 
@@ -177,10 +227,13 @@ while true; do
 done
 
 
-# move cursor to down the game
-printf '\033[9;1H'
+# move cursor below game
+printf '\033[%d;1H' "$((6 + drawn_lines))"
 
-elapsed=$((SECONDS - start_time))
+# show the cursor again
+printf '\033[?25h'
+
+elapsed=$duration
 typed_chars=${#typed}
 correct_chars=0
 
@@ -192,11 +245,8 @@ for ((i=0; i<typed_chars; i++)); do
 
 done
 
-if (( elapsed > 0 )); then
-    wpm=$(( (typed_chars * 12 + elapsed / 2) / elapsed ))
-else
-    wpm=0
-fi
+# only correct characters to count towards wpm
+wpm=$(( (correct_chars * 12 + elapsed / 2) / elapsed ))
 
 if (( typed_chars > 0 )); then
     accuracy=$(( (correct_chars * 100 + typed_chars / 2) / typed_chars ))
