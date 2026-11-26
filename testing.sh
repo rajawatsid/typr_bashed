@@ -12,4 +12,12 @@ while IFS= read -rsn key; do
 
     printf '\r'
     for ((i=0; i<{#target}; i++)); do
-        if
+        if   (( i >= ${#typed} ));            then printf '\e[2m%s\e[0m'  "${target:i:1}"
+        elif [[ ${typed:i:1} == ${target:i:1} ]]; then printf '\e[32m%s\e[0m' "${target:i:1}"
+        else                                       printf '\e[31m%s\e[0m' "${target:i:1}"
+        fi
+    done
+
+    (( ${#typed} >= ${#target} )) && break
+done
+echo
