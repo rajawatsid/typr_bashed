@@ -109,6 +109,8 @@ draw_text() {
         fi
 
         # only redraw characters that have changed
+        char="${target:i:1}"
+
         if (( i < ${#typed} )); then
 
             if [[ ${typed:i:1} == "${target:i:1}" ]]; then
@@ -127,7 +129,11 @@ draw_text() {
         # position cursor
         printf '\033[%d;%dH' "$row" "$col"
 
-        printf '%b%s%b' "$color" "${target:i:1}" "$RESET"
+        if (( i == ${#typed} )); then
+            printf '\033[4m%b%s%b\033[24m' "$color" "$char" "$RESET"
+        else
+            printf '%b%s%b' "$color" "$char" "$RESET"
+        fi
 
         ((col++))
 
