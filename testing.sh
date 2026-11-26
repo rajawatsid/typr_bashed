@@ -20,9 +20,15 @@ RESET='\e[0m'
 # duration thingy
 choose_duration() {
 
-    echo "=============================="
-    echo "       Welcome to Typr!"
-    echo "=============================="
+    cat << 'EOF'
+ _______ __   __ ____   ____
+|__   __|\ \ / /  _  \ |  _  \
+   | |    \ V /| |_)  ||_|_)_/
+   | |     | | |  ___/ | | \ \
+   |_|     |_| |_|     |_|  \_\
+
+EOF
+
     echo
     echo "How long do you wanna type for?"
     echo
@@ -51,7 +57,7 @@ choose_duration() {
 draw_text() {
 
     # go to the sentence line
-    printf '\033[1;1H'
+    printf '\033[5;1H'
     printf '\033[2K'
 
     for ((i=0; i<${#target}; i++)); do
@@ -94,7 +100,7 @@ draw_timer() {
     (( remaining < 0 )) && remaining=0
 
     # timer goes on the third line
-    printf '\033[3;1H'
+    printf '\033[7;1H'
     printf '\033[2K'
     printf "Time left: %s seconds" "$remaining"
 
@@ -119,11 +125,12 @@ update_input() {
 }
 
 
-
+# to clear terminal and start from the top
+printf '\033[H\033[2J'
 
 choose_duration
 
-clear
+printf '\033[H\033[2J'
 
 echo "Type the sentence below!"
 echo
@@ -170,13 +177,41 @@ while true; do
 done
 
 
+# move cursor to down the game
+printf '\033[9;1H'
 
-printf '\033[5;1H'
+elapsed=$((SECONDS - start_time))
+typed_chars=${#typed}
+correct_chars=0
+
+for ((i=0; i<typed_chars; i++)); do
+
+    if (( i < ${#target} )) && [[ ${typed:i:1} == "${target:i:1}" ]]; then
+        ((correct_chars++))
+    fi
+
+done
+
+if (( elapsed > 0 )); then
+    wpm=$(( (typed_chars * 12 + elapsed / 2) / elapsed ))
+else
+    wpm=0
+fi
+
+if (( typed_chars > 0 )); then
+    accuracy=$(( (correct_chars * 100 + typed_chars / 2) / typed_chars ))
+else
+    accuracy=0
+fi
 
 echo
 echo "=============================="
 echo "          Time's up!"
 echo "=============================="
 echo
-echo "You typed ${#typed} characters!"
+echo "You typed $typed_chars characters in $elapsed seconds!"
+echo
+echo "Your WPM is ~$wpm"
+echo
+echo "Your accuracy is ~$accuracy%"
 echo
