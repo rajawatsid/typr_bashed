@@ -8,6 +8,7 @@ duration=0
 start_time=0
 
 
+# colors
 
 GREEN='\e[1;92m'
 RED='\e[1;91m'
@@ -15,8 +16,8 @@ YELLOW='\e[1;93m'
 GRAY='\e[1;90m'
 RESET='\e[0m'
 
-# duration thingy
 
+# duration thingy
 choose_duration() {
 
     echo "=============================="
@@ -45,11 +46,13 @@ choose_duration() {
 }
 
 
-# for showing text
+# text comes out
 
 draw_text() {
 
-    printf '\r\033[2K'
+    # go to the sentence line
+    printf '\033[1;1H'
+    printf '\033[2K'
 
     for ((i=0; i<${#target}; i++)); do
 
@@ -77,10 +80,11 @@ draw_text() {
         fi
 
     done
+
 }
 
 
-# for timer display
+# times
 
 draw_timer() {
 
@@ -89,10 +93,15 @@ draw_timer() {
 
     (( remaining < 0 )) && remaining=0
 
-    printf '\r\033[2KTime left: %s seconds' "$remaining"
+    # timer goes on the third line
+    printf '\033[3;1H'
+    printf '\033[2K'
+    printf "Time left: %s seconds" "$remaining"
+
 }
 
 
+# user type it and color change
 update_input() {
 
     # backspace
@@ -110,7 +119,7 @@ update_input() {
 }
 
 
-# game
+
 
 choose_duration
 
@@ -120,20 +129,20 @@ echo "Type the sentence below!"
 echo
 echo "Timer starts with your first keypress."
 
-# wait for first keypress
-IFS= read -rsn1 key
 
-# NOW draw the sentence
-echo
+printf '\n\n'
+
 draw_text
 
-# start timer
+
+# wait for first keypress then do timer
+IFS= read -rsn1 key
+
 start_time=$SECONDS
 
 update_input
 
-# put cursor on the timer line
-echo
+draw_text
 draw_timer
 
 
@@ -151,9 +160,7 @@ while true; do
         update_input
 
         # redraw sentence
-        printf '\033[1A'
         draw_text
-        printf '\n'
 
     fi
 
@@ -164,7 +171,8 @@ done
 
 
 
-echo
+printf '\033[5;1H'
+
 echo
 echo "=============================="
 echo "          Time's up!"
