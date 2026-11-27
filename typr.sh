@@ -8,6 +8,7 @@ VERSION="DEVELOPMENT"
 # where installed code lives (install.sh puts things here)
 BIN_DIR="${TYPR_BIN_DIR:-$HOME/.local/bin}"
 DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/typr"
+HISTORY_FILE="$DATA_DIR/history.csv"
 [[ -s "$DATA_DIR/version" ]] && IFS= read -r VERSION < "$DATA_DIR/version"
 
 # look next to the script first (for development), then in the install folder
@@ -86,6 +87,7 @@ Usage:
   typr --help       show this help
   typr --version    show the version
   typr --update     update typr to the latest version
+  typr --show-history  show saved sessions
   typr --uninstall  remove typr from your system
 EOF
 }
@@ -96,12 +98,12 @@ update_typr() {
     local update_url="https://github.com/rajawatsid/typr_bashed/releases/latest/download/install.sh"
 
     if ! command -v curl >/dev/null 2>&1; then
-        echo "typr: curl is required to update typr :/" >&2
+        echo "typr: curl is required to update typr." >&2
         return 1
     fi
 
     installer=$(mktemp) || {
-        echo "typr: couldn't create a temporary file for the update :(" >&2
+        echo "typr: couldn't create a temporary file for the update." >&2
         return 1
     }
 
@@ -109,7 +111,7 @@ update_typr() {
 
     if ! curl -fsSL "$update_url" -o "$installer"; then
         rm -f "$installer"
-        echo "typr: couldn't download the update installer :(" >&2
+        echo "typr: couldn't download the update installer." >&2
         return 1
     fi
 
@@ -117,12 +119,79 @@ update_typr() {
 
     if bash "$installer"; then
         rm -f "$installer"
-        echo "typr: update complete :)"
+        echo "typr update complete!"
     else
         local status=$?
         rm -f "$installer"
-        echo "typr: update failed >:(" >&2
+        echo "typr: update failed." >&2
         return "$status"
+    fi
+
+}
+
+save_session() {
+
+    mkdir -p "$DATA_DIR" || {
+        echo "typr: couldn't create the history folder." >&2
+        return 1
+    }
+
+    if [[ ! -s $HISTORY_FILE ]]; then
+        echo "date,time,duration,wpm,accuracy,characters,correct,incorrect" > "$HISTORY_FILE"
+    fi
+
+    printf '%s,%s,%s,%s,%s,%s,%s,%s\n' \
+        "$(date +%F)" \
+        "$(date +%H:%M)" \
+        "$duration" \
+        "$wpm" \
+        "$accuracy" \
+        "$total_keys" \
+        "$((total_keys - wrong_keys))" \
+        "$wrong_keys" >> "$HISTORY_FILE"
+
+}
+
+show_history() {
+
+    local i line session_date session_time session_duration session_wpm
+    local session_accuracy characters correct incorrect
+    local -a sessions=()
+
+    echo
+    echo "=============================="
+    echo "        SESSION HISTORY"
+    echo "=============================="
+    echo
+
+    if [[ ! -s $HISTORY_FILE ]]; then
+        echo "No sessions saved yet."
+    else
+        while IFS= read -r line; do
+            [[ $line == date,* ]] && continue
+            [[ -n $line ]] && sessions+=("$line")
+        done < "$HISTORY_FILE"
+
+        if (( ${#sessions[@]} == 0 )); then
+            echo "No sessions saved yet."
+        else
+            printf '%-12s %-6s %-5s %-9s %s\n' "DATE" "TIME" "WPM" "ACCURACY" "DURATION"
+            echo "------------------------------------------------"
+            for ((i=${#sessions[@]}-1; i>=0; i--)); do
+                IFS=, read -r session_date session_time session_duration session_wpm \
+                    session_accuracy characters correct incorrect <<< "${sessions[i]}"
+
+                printf '%-12s %-6s %-5s %-9s %ss\n' \
+                    "$session_date" "$session_time" "$session_wpm" \
+                    "${session_accuracy}%" "$session_duration"
+            done
+        fi
+    fi
+
+    echo
+    if [[ ${1:-} != "--no-pause" ]]; then
+        read -rsn1 -p "Press any key to return..."
+        echo
     fi
 
 }
@@ -153,6 +222,7 @@ case "${1:-}" in
     -h|--help) usage; exit 0 ;;
     -v|--version) echo "typr $VERSION"; exit 0 ;;
     --update) update_typr; exit $? ;;
+    --show-history) show_history --no-pause; exit 0 ;;
     --uninstall) uninstall; exit 0 ;;
     *)
         echo "typr: unknown option: $1" >&2
@@ -712,6 +782,8 @@ else
     accuracy=0
 fi
 
+save_session
+
 echo
 echo "=============================="
 echo "          Time's up!"
@@ -724,17 +796,20 @@ echo
 echo "Your accuracy is ~$accuracy%"
 echo
 
-echo "=============================="
-echo "  [R] Retry      [Q] Quit"
-echo "=============================="
-echo
-
 while true; do
+    echo
+    echo "=============================="
+    echo " [R] Retry  [H] History  [Q] Quit"
+    echo "=============================="
+
     IFS= read -rsn1 choice
 
     case "$choice" in
         [rR])
             exec bash "$0"
+            ;;
+        [hH])
+            show_history
             ;;
         [qQ])
             echo
