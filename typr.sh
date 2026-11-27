@@ -7,6 +7,7 @@ VERSION="DEVELOPMENT"
 
 # where installed code lives (install.sh puts things here)
 BIN_DIR="${TYPR_BIN_DIR:-$HOME/.local/bin}"
+DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/typr"
 [[ -s "$DATA_DIR/version" ]] && IFS= read -r VERSION < "$DATA_DIR/version"
 
 # look next to the script first (for development), then in the install folder
