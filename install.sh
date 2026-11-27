@@ -2,15 +2,15 @@
 #
 # typr installer
 #
-#   curl -fsSL https://raw.githubusercontent.com/rajawatsid/typr/v0.0.1/install.sh | bash
+#   curl -fsSL https://github.com/rajawatsid/typr_bashed/releases/latest/download/install.sh | bash
 #
 
 main() {
 
     set -euo pipefail
 
-    local repo="${TYPR_REPO:-rajawatsid/typr}"
-    local ref="${TYPR_REF:-v1.0.0}"
+    local repo="${TYPR_REPO:-rajawatsid/typr_bashed}"
+    local ref="${TYPR_REF:-v0.0.2}"
     local base_url="https://raw.githubusercontent.com/$repo/$ref"
 
     local bin_dir="${TYPR_BIN_DIR:-$HOME/.local/bin}"
@@ -18,7 +18,8 @@ main() {
 
     local tmp
     tmp="$(mktemp -d)"
-    trap 'rm -rf "$tmp"' EXIT
+    # double quotes so $tmp is filled in now, not when the trap fires after main returns
+    trap "rm -rf '$tmp'" EXIT
 
     say()  { printf '%s\n' "$*"; }
     fail() { printf 'install failed: %s\n' "$*" >&2; exit 1; }
@@ -37,7 +38,7 @@ main() {
     [[ -n ${HOME:-} ]] || fail "HOME is not set"
 
     command -v bash >/dev/null 2>&1 || fail "bash is required"
-    command -v tput >/dev/null 2>&1 || fail "tput is required (install ncurses)"
+    command -v tput >/dev/null 2>&1 || fail "tput is required (install ncurses: on Debian/Ubuntu, sudo apt install ncurses-bin)"
 
     if (( BASH_VERSINFO[0] < 4 )); then
         say "Warning: you are running bash $BASH_VERSION, but typr needs bash 4+."
@@ -47,8 +48,8 @@ main() {
     # download
     say "Downloading typr ($ref)..."
 
-    download "$base_url/typr.sh" "$tmp/typr"
-    download "$base_url/words/english.txt" "$tmp/english.txt"
+    download "$base_url/typr.sh" "$tmp/typr" || fail "couldn't download typr.sh from $base_url (does the tag '$ref' exist?)"
+    download "$base_url/words/english.txt" "$tmp/english.txt" || fail "couldn't download the word list from $base_url"
 
     # make sure we got what we expected and not an error page
     [[ -s $tmp/typr ]] || fail "downloaded script is empty"
