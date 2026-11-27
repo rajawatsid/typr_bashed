@@ -85,8 +85,46 @@ Usage:
   typr              start a test
   typr --help       show this help
   typr --version    show the version
+  typr --update     update typr to the latest version
   typr --uninstall  remove typr from your system
 EOF
+}
+
+update_typr() {
+
+    local installer
+    local update_url="https://github.com/rajawatsid/typr_bashed/releases/latest/download/install.sh"
+
+    if ! command -v curl >/dev/null 2>&1; then
+        echo "typr: curl is required to update typr :/" >&2
+        return 1
+    fi
+
+    installer=$(mktemp) || {
+        echo "typr: couldn't create a temporary file for the update :(" >&2
+        return 1
+    }
+
+    echo "Checking for the latest version of typr..."
+
+    if ! curl -fsSL "$update_url" -o "$installer"; then
+        rm -f "$installer"
+        echo "typr: couldn't download the update installer :(" >&2
+        return 1
+    fi
+
+    echo "Running the installer..."
+
+    if bash "$installer"; then
+        rm -f "$installer"
+        echo "typr: update complete :)"
+    else
+        local status=$?
+        rm -f "$installer"
+        echo "typr: update failed >:(" >&2
+        return "$status"
+    fi
+
 }
 
 uninstall() {
@@ -114,6 +152,7 @@ case "${1:-}" in
     "") ;;
     -h|--help) usage; exit 0 ;;
     -v|--version) echo "typr $VERSION"; exit 0 ;;
+    --update) update_typr; exit $? ;;
     --uninstall) uninstall; exit 0 ;;
     *)
         echo "typr: unknown option: $1" >&2
