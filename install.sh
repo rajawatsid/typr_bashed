@@ -10,8 +10,11 @@ main() {
     set -euo pipefail
 
     local repo="${TYPR_REPO:-rajawatsid/typr_bashed}"
-    local ref="${TYPR_REF:-v0.0.2}"
-    local base_url="https://raw.githubusercontent.com/$repo/$ref"
+    local ref="${TYPR_REF:-}"
+    local base_url=""
+
+    # checks
+    [[ -n ${HOME:-} ]] || fail "HOME is not set"
 
     local bin_dir="${TYPR_BIN_DIR:-$HOME/.local/bin}"
     local data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/typr"
@@ -34,8 +37,17 @@ main() {
         fi
     }
 
-    # checks
-    [[ -n ${HOME:-} ]] || fail "HOME is not set"
+    if [[ -z $ref ]]; then
+        download "https://api.github.com/repos/$repo/releases/latest" "$tmp/release.json" || fail "couldn't find the latest release"
+
+        ref="$(sed -n 's/^[[:space:]]*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' "$tmp/release.json" | head -n 1)"
+
+        [[ -n $ref ]] || fail "couldn't find the latest release tag"
+    fi
+
+    base_url="https://raw.githubusercontent.com/$repo/$ref"
+
+
 
     command -v bash >/dev/null 2>&1 || fail "bash is required"
     command -v tput >/dev/null 2>&1 || fail "tput is required (install ncurses: on Debian/Ubuntu, sudo apt install ncurses-bin)"
@@ -67,6 +79,7 @@ main() {
     chmod 755 "$bin_dir/typr"
 
     cp "$tmp/english.txt" "$data_dir/words/english.txt"
+    printf '%s\n' "$ref" > "$data_dir/version"
 
     say
     say "typr installed!"
