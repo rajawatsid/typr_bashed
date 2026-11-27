@@ -80,17 +80,38 @@ main() {
             say "Run it with:  typr"
             ;;
         *)
-            local rc="your shell's rc file"
+            local rc=""
+            local path_line="export PATH=\"$bin_dir:\$PATH\""
+
             case "$(basename "${SHELL:-}")" in
-                zsh)  rc="~/.zshrc" ;;
-                bash) rc="~/.bashrc" ;;
+                zsh)  rc="$HOME/.zshrc" ;;
+                bash)
+                    rc="$HOME/.bashrc"
+                    [[ $(uname) == "Darwin" ]] && rc="$HOME/.bash_profile"
+                    ;;
             esac
 
-            say "$bin_dir is not on your PATH yet. Add this line to $rc:"
-            say
-            say "  export PATH=\"$bin_dir:\$PATH\""
-            say
-            say "Then restart your terminal and run:  typr"
+            # a script can't change the terminal that started it, so we add the line to the rc file and the user reloads it (set TYPR_NO_MODIFY_PATH=1 to skip)
+            if [[ -n $rc && -z ${TYPR_NO_MODIFY_PATH:-} ]]; then
+
+                if grep -qsF "$bin_dir" "$rc"; then
+                    say "$bin_dir is already set up in $rc."
+                else
+                    printf '\n# added by the typr installer\n%s\n' "$path_line" >> "$rc"
+                    say "Added $bin_dir to your PATH in $rc."
+                fi
+
+                say
+                say "To use typr right now, run:  source $rc"
+                say "(new terminals pick it up on their own)"
+
+            else
+                say "$bin_dir is not on your PATH yet. Add this line to your shell's rc file:"
+                say
+                say "  $path_line"
+                say
+                say "Then restart your terminal and run:  typr"
+            fi
             ;;
     esac
 
