@@ -2,7 +2,7 @@
 #
 # typr installer
 #
-#   curl -fsSL https://raw.githubusercontent.com/rajawatsid/typr/v1.0.0/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/rajawatsid/typr/v0.0.1/install.sh | bash
 #
 
 main() {
