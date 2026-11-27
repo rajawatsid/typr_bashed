@@ -684,3 +684,22 @@ echo "Your WPM is ~$wpm"
 echo
 echo "Your accuracy is ~$accuracy%"
 echo
+
+echo "=============================="
+echo "  [R] Retry      [Q] Quit"
+echo "=============================="
+echo
+
+while true; do
+    IFS= read -rsn1 choice
+
+    case "$choice" in
+        [rR])
+            exec bash "$0"
+            ;;
+        [qQ])
+            echo
+            exit 0
+            ;;
+    esac
+done
