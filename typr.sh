@@ -17,6 +17,17 @@ WORD_FILE="$SCRIPT_DIR/words/english.txt"
 target=""
 typed=""
 
+# wrong red letters
+extra_at=()
+
+# wrong letters can pile up in front of one real letter
+MAX_EXTRA=8
+
+layout_changed=0
+
+total_keys=0
+wrong_keys=0
+
 drawn_lines=0
 
 # for how many word to add at once
@@ -36,8 +47,12 @@ prev_len=0
 resized=0
 started=0
 
-line_of=()
-col_of=()
+
+display=""
+cell_src=()
+cell_of=()
+cell_line=()
+cell_col=()
 line_start=(0)
 
 
@@ -176,26 +191,49 @@ set_cols() {
 # works out where every character goes on screen
 compute_layout() {
 
-    local i char next_word
+    local i j k char next_word extras
     local row=0
     local col=1
 
-    line_of=()
-    col_of=()
+    display=""
+    cell_src=()
+    cell_of=()
+    cell_line=()
+    cell_col=()
     line_start=(0)
+
+    # put the wrong letters in front of the real letter they were typed at
+    k=0
 
     for ((i=0; i<${#target}; i++)); do
 
-        char="${target:i:1}"
+        extras="${extra_at[i]-}"
 
-        line_of[i]=$row
-        col_of[i]=$col
+        for ((j=0; j<${#extras}; j++)); do
+            display+="${extras:j:1}"
+            cell_src[k]=-1
+            ((k++))
+        done
+
+        display+="${target:i:1}"
+        cell_src[k]=$i
+        cell_of[i]=$k
+        ((k++))
+
+    done
+
+    for ((k=0; k<${#display}; k++)); do
+
+        char="${display:k:1}"
+
+        cell_line[k]=$row
+        cell_col[k]=$col
         ((col++))
 
         # move to next line if needed
         if [[ $char == " " ]]; then
 
-            next_word="${target:i+1}"
+            next_word="${display:k+1}"
             next_word="${next_word%% *}"
 
             if (( col + ${#next_word} - 1 > cols )); then
@@ -208,7 +246,7 @@ compute_layout() {
         if (( col > cols + 1 )); then
             ((row++))
             col=1
-            line_start[row]=$((i + 1))
+            line_start[row]=$((k + 1))
         fi
 
     done
@@ -254,12 +292,13 @@ check_words() {
 # keeps the current line on the second row once you get going
 update_top() {
 
-    local cur_line
+    local cur_line k
 
     if (( ${#typed} >= ${#target} )); then
         cur_line=$((total_lines - 1))
     else
-        cur_line=${line_of[${#typed}]}
+        k=${cell_of[${#typed}]}
+        cur_line=${cell_line[k]}
     fi
 
     if (( cur_line > 1 )); then
@@ -274,31 +313,29 @@ update_top() {
 # draws a single character of the text
 draw_char() {
 
-    local i=$1
-    local char color screen_row
+    local k=$1
+    local char color screen_row src
 
-    (( i >= ${#target} )) && return
+    (( k >= ${#display} )) && return
 
-    screen_row=$((5 + line_of[i] - top_line))
+    screen_row=$((5 + cell_line[k] - top_line))
 
     # skip anything outside of the shown lines
     (( screen_row < 5 || screen_row >= 5 + WINDOW_LINES )) && return
 
-    char="${target:i:1}"
+    char="${display:k:1}"
+    src=${cell_src[k]}
 
     # only redraw characters that have changed
-    if (( i < ${#typed} )); then
+    if (( src < 0 )); then
 
-        if [[ ${typed:i:1} == "$char" ]]; then
-            color="$GREEN"
-        else
-            color="$RED"
+        color="$RED"
 
-            # a wrong space would be invisible otherwise
-            [[ $char == " " ]] && char="_"
-        fi
+    elif (( src < ${#typed} )); then
 
-    elif (( i == ${#typed} )); then
+        color="$GREEN"
+
+    elif (( src == ${#typed} )); then
         color="$YELLOW"
 
     else
@@ -306,9 +343,9 @@ draw_char() {
     fi
 
     # position cursor
-    printf '\033[%d;%dH' "$screen_row" "${col_of[i]}"
+    printf '\033[%d;%dH' "$screen_row" "${cell_col[k]}"
 
-    if (( i == ${#typed} )); then
+    if (( src == ${#typed} )); then
         printf '\033[4m%b%s%b\033[24m' "$color" "$char" "$RESET"
     else
         printf '%b%s%b' "$color" "$char" "$RESET"
@@ -320,7 +357,7 @@ draw_char() {
 # text comes out
 draw_text() {
 
-    local r i from to
+    local r k from to
 
     update_top
 
@@ -328,11 +365,11 @@ draw_text() {
         printf '\033[%d;1H\033[2K' "$((5 + r))"
     done
 
-    from=${line_start[top_line]:-${#target}}
-    to=${line_start[top_line + WINDOW_LINES]:-${#target}}
+    from=${line_start[top_line]:-${#display}}
+    to=${line_start[top_line + WINDOW_LINES]:-${#display}}
 
-    for ((i=from; i<to; i++)); do
-        draw_char "$i"
+    for ((k=from; k<to; k++)); do
+        draw_char "$k"
     done
 
     drawn_lines=$WINDOW_LINES
@@ -344,7 +381,15 @@ draw_text() {
 redraw_changed() {
 
     local old_top=$top_line
-    local i from to
+    local k from to a b
+
+    # a wrong letter went in or out so everything after it moves
+    if (( layout_changed )); then
+        layout_changed=0
+        compute_layout
+        draw_text
+        return
+    fi
 
     update_top
 
@@ -355,15 +400,18 @@ redraw_changed() {
     fi
 
     if (( prev_len < ${#typed} )); then
-        from=$prev_len
-        to=${#typed}
+        a=$prev_len
+        b=${#typed}
     else
-        from=${#typed}
-        to=$prev_len
+        a=${#typed}
+        b=$prev_len
     fi
 
-    for ((i=from; i<=to; i++)); do
-        draw_char "$i"
+    from=${cell_of[a]}
+    to=${cell_of[b]}
+
+    for ((k=from; k<=to; k++)); do
+        draw_char "$k"
     done
 
 }
@@ -416,9 +464,18 @@ handle_resize() {
 # user type it and color change
 update_input() {
 
+    local n=${#typed}
+
     # backspace
     if [[ $key == $'\x7f' || $key == $'\x08' ]]; then
-        typed="${typed%?}"
+
+        # take away the wrong letters first if there are any
+        if [[ -n ${extra_at[n]-} ]]; then
+            extra_at[n]="${extra_at[n]%?}"
+            layout_changed=1
+        else
+            typed="${typed%?}"
+        fi
 
     # ignore enter
     elif [[ -z $key ]]; then
@@ -429,9 +486,31 @@ update_input() {
         read -rsn2 -t 0.01 _
         return
 
+    # ignore tab and other control keys
+    elif [[ $key == [[:cntrl:]] ]]; then
+        return
+
     # don't let it grow past the sentence
-    elif (( ${#typed} < ${#target} )); then
-        typed+="$key"
+    elif (( n < ${#target} )); then
+
+        ((total_keys++))
+
+        if [[ $key == "${target:n:1}" ]]; then
+            typed+="$key"
+        else
+            ((wrong_keys++))
+
+            if (( ${#extra_at[n]} < MAX_EXTRA )); then
+
+            # wrong space was invisible
+                [[ $key == " " ]] && key="_"
+
+                extra_at[n]+="$key"
+                layout_changed=1
+
+            fi
+        fi
+
     fi
 
 }
@@ -482,6 +561,7 @@ while true; do
         "") continue ;;
         $'\e') read -rsn2 -t 0.01 _; continue ;;
         $'\x7f'|$'\x08') continue ;;
+        [[:cntrl:]]) continue ;;
     esac
 
     break
@@ -494,6 +574,12 @@ started=1
 prev_len=${#typed}
 update_input
 check_words
+
+if (( layout_changed )); then
+    layout_changed=0
+    compute_layout
+fi
+
 draw_text
 draw_timer
 
@@ -533,21 +619,14 @@ printf '\033[?25h'
 
 elapsed=$duration
 typed_chars=${#typed}
-correct_chars=0
 
-for ((i=0; i<typed_chars; i++)); do
-
-    if (( i < ${#target} )) && [[ ${typed:i:1} == "${target:i:1}" ]]; then
-        ((correct_chars++))
-    fi
-
-done
+correct_chars=$typed_chars
 
 # only correct characters to count towards wpm
 wpm=$(( (correct_chars * 12 + elapsed / 2) / elapsed ))
 
-if (( typed_chars > 0 )); then
-    accuracy=$(( (correct_chars * 100 + typed_chars / 2) / typed_chars ))
+if (( total_keys > 0 )); then
+    accuracy=$(( ((total_keys - wrong_keys) * 100 + total_keys / 2) / total_keys ))
 else
     accuracy=0
 fi

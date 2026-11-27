@@ -9,7 +9,7 @@ main() {
 
     set -euo pipefail
 
-    local repo="${TYPR_REPO:-YOUR_GITHUB_USER/typr}"
+    local repo="${TYPR_REPO:-rajawatsid/typr}"
     local ref="${TYPR_REF:-v1.0.0}"
     local base_url="https://raw.githubusercontent.com/$repo/$ref"
 
