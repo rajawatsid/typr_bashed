@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
 
-VERSION="0.0.1"
+VERSION="DEVELOPMENT"
 
 : "${HOME:?HOME is not set}"
 
 # where installed code lives (install.sh puts things here)
 BIN_DIR="${TYPR_BIN_DIR:-$HOME/.local/bin}"
-DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/typr"
+[[ -s "$DATA_DIR/version" ]] && IFS= read -r VERSION < "$DATA_DIR/version"
 
 # look next to the script first (for development), then in the install folder
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
