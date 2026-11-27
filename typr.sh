@@ -18,6 +18,10 @@ WORD_FILE="$SCRIPT_DIR/words/english.txt"
 target=""
 typed=""
 
+
+layout_start=0
+
+
 # wrong red letters
 extra_at=()
 
@@ -382,13 +386,46 @@ draw_text() {
 redraw_changed() {
 
     local old_top=$top_line
-    local k from to a b
+    local start=$layout_start
+    local old_count=${#display}
+    local k screen_row key
+
+    local -a old_line=("${cell_line[@]}")
+    local -a old_col=("${cell_col[@]}")
+
+    local -A occupied=()
 
     # a wrong letter went in or out so everything after it moves
     if (( layout_changed )); then
         layout_changed=0
         compute_layout
-        draw_text
+        update_top
+
+        if (( top_line != old_top )); then
+            draw_text
+            return
+        fi
+
+        for ((k=0; k<${#display}; k++)); do
+            occupied["${cell_line[k]},${cell_col[k]}"]=1
+        done
+
+        for ((k=start; k<old_count; k++)); do
+            screen_row=$((5 + old_line[k] - top_line))
+
+            if (( screen_row >= 5 && screen_row < 5 + WINDOW_LINES )); then
+                key="${old_line[k]},${old_col[k]}"
+
+                if [[ -z ${occupied[$key]+yes} ]]; then
+                    printf '\033[%d;%dH ' "$screen_row" "${old_col[k]}"
+                fi
+            fi
+        done
+
+        for ((k=start; k<${#display}; k++)); do
+            draw_char "$k"
+        done
+
         return
     fi
 
@@ -400,6 +437,8 @@ redraw_changed() {
         return
     fi
 
+    local a b
+
     if (( prev_len < ${#typed} )); then
         a=$prev_len
         b=${#typed}
@@ -408,8 +447,8 @@ redraw_changed() {
         b=$prev_len
     fi
 
-    from=${cell_of[a]}
-    to=${cell_of[b]}
+    local from=${cell_of[a]}
+    local to=${cell_of[b]}
 
     for ((k=from; k<=to; k++)); do
         draw_char "$k"
@@ -472,6 +511,7 @@ update_input() {
 
         # take away the wrong letters first if there are any
         if [[ -n ${extra_at[n]-} ]]; then
+            layout_start=$(( cell_of[n] - ${#extra_at[n]} ))
             extra_at[n]="${extra_at[n]%?}"
             layout_changed=1
         else
@@ -506,6 +546,7 @@ update_input() {
             # wrong space was invisible
                 [[ $key == " " ]] && key="_"
 
+                layout_start=$(( cell_of[n] - ${#extra_at[n]} ))
                 extra_at[n]+="$key"
                 layout_changed=1
 
