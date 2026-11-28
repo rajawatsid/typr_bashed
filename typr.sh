@@ -389,6 +389,11 @@ echo "  4. Remove any distracting elements if you can"
             1) duration=10; break ;;
             2) duration=30; break ;;
             3) duration=60; break ;;
+            q|Q)
+                echo
+                echo "bye bye"
+                exit 0
+                ;;
             *) echo "Invalid choice! Try again." ;;
         esac
 
