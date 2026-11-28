@@ -92,28 +92,77 @@ Usage:
 EOF
 }
 
+
 update_typr() {
 
     local installer
-    local update_url="https://github.com/rajawatsid/typr_bashed/releases/latest/download/install.sh"
+    local latest_version
+    local current_version="${VERSION#v}"
+
+    local repo="rajawatsid/typr_bashed"
+    local api_url="https://api.github.com/repos/$repo/releases/latest"
+    local update_url="https://github.com/$repo/releases/latest/download/install.sh"
 
     if ! command -v curl >/dev/null 2>&1; then
         echo "typr: curl is required to update typr." >&2
         return 1
     fi
 
+    echo "Checking for the latest version of typr..."
+
+    
+    latest_version=$(curl -fsSL \
+        -H "Accept: application/vnd.github+json" \
+        -H "User-Agent: typr" \
+        "$api_url" |
+        sed -n 's/^[[:space:]]*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p')
+
+    if [[ -z $latest_version ]]; then
+        echo "typr: couldn't find the latest version on github." >&2
+        return 1
+    fi
+
+    latest_version="${latest_version#v}"
+
+    # check if typr is already up to date
+    if [[ $current_version == "$latest_version" ]]; then
+        echo "You're already using the latest version of typr!"
+        echo "Current version: $VERSION"
+        return 0
+    fi
+
+        cat << 'EOF'
+ _    _  _____   _____       ___   _______  _______  ___    _   _____
+| |  | ||  _  \ |  __  \    / _ \ |__   __||__   __||   \  | | /  ___|
+| |  | || |_)  || |  \  \  / /_\ \   | |      | |   | |\ \ | ||  /  __
+| \__/ ||  ___/ | |__/  / / /---\ \  | |    __| |__ | | \ \| ||  \__\ \
+ \____/ |_|     |______/ /_/     \_\ |_|   |_______||_|  \___| \______/
+                 _______ __   __ ____   ____
+                |__   __|\ \ / /  _  \ |  _  \
+                   | |    \ V /| |_)  ||_|_)_/
+                   | |     | | |  ___/ | | \ \
+                   |_|     |_| |_|     |_|  \_\
+
+EOF
+    echo "                To v$latest_version"
+    echo "==========================================================================="
+    echo "A new version of typr is available!"
+    echo "Current version: $VERSION"
+    echo "Latest version:  v$latest_version"
+    echo
+
     installer=$(mktemp) || {
         echo "typr: couldn't create a temporary file for the update." >&2
         return 1
     }
 
-    echo "Checking for the latest version of typr..."
-
+    # download the installer
     if ! curl -fsSL "$update_url" -o "$installer"; then
         rm -f "$installer"
         echo "typr: couldn't download the update installer." >&2
         return 1
     fi
+
 
     echo "Running the installer..."
 
@@ -204,9 +253,9 @@ show_history() {
     local -a sessions=()
 
     echo
-    echo "=============================="
-    echo "        SESSION HISTORY"
-    echo "=============================="
+    echo "==================================="
+    echo "          SESSION HISTORY"
+    echo "==================================="
     echo
 
     if [[ ! -s $HISTORY_FILE ]]; then
@@ -833,9 +882,9 @@ save_session
 sleep 3
 
 echo
-echo "=============================="
-echo "          Time's up!"
-echo "=============================="
+echo "==================================="
+echo "             Time's up!"
+echo "==================================="
 echo
 echo "You typed $typed_chars characters in $elapsed seconds!"
 echo
@@ -854,9 +903,9 @@ fi
 
 while true; do
     echo
-    echo "=============================="
+    echo "==================================="
     echo " [R] Retry  [H] History  [Q] Quit"
-    echo "=============================="
+    echo "==================================="
 
     IFS= read -rsn1 choice
 
