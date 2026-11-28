@@ -73,7 +73,7 @@ main() {
                            |_|     |_| |_|     |_|  \_\
 
 EOF
-    say "                      Downloading typr ($ref)..."
+    say "                           Downloading typr ($ref)..."
 
     download "$base_url/typr.sh" "$tmp/typr" || fail "couldn't download typr.sh from $base_url (does the tag '$ref' exist?)"
     download "$base_url/words/english.txt" "$tmp/english.txt" || fail "couldn't download the word list from $base_url"
