@@ -83,12 +83,12 @@ usage() {
 typr - a tiny typing test for your terminal
 
 Usage:
-  typr              start a test
-  typr --help       show this help
-  typr --version    show the version
-  typr --update     update typr to the latest version
-  typr --show-history  show saved sessions
-  typr --uninstall  remove typr from your system
+  typr                  start a test
+  typr --help           show this help
+  typr --version        show the version
+  typr --update         update typr to the latest version
+  typr --show-history   show saved sessions
+  typr --uninstall      remove typr from your system
 EOF
 }
 
@@ -138,7 +138,6 @@ update_typr() {
         return 0
     fi
 
-    # splash screen
     cat << 'EOF'
  _    _  _____   _____       ___   _______  _______  ___    _   _____
 | |  | ||  _  \ |  __  \    / _ \ |__   __||__   __||   \  | | /  ___|

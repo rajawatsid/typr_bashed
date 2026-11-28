@@ -58,7 +58,22 @@ main() {
     fi
 
     # download
-    say "Downloading typr ($ref)..."
+
+    # splash screen
+    cat << 'EOF'
+ _______  ___    _   ____ _______   ___     _      _      _______  ___    _   _____
+|__   __||   \  | |/ ___||__   __| / _ \   | |    | |    |__   __||   \  | | /  ___|
+   | |   | |\ \ | |\_\__    |_|   / /_\ \  | |    | |       | |   | |\ \ | ||  /  __
+ __| |__ | | \ \| | __\ \   |_|  / /---\ \ | |___ | |___  __| |__ | | \ \| ||  \__\ \
+|_______||_|  \___||____/   |_| /_/     \_\|_____||_____||_______||_|  \___| \______/
+                         _______ __   __ ____   ____
+                        |__   __|\ \ / /  _  \ |  _  \
+                           |_|    \ V /| |_)  ||_|_)_/
+                           |_|     | | |  ___/ | | \ \
+                           |_|     |_| |_|     |_|  \_\
+
+EOF
+    say "                      Downloading typr ($ref)..."
 
     download "$base_url/typr.sh" "$tmp/typr" || fail "couldn't download typr.sh from $base_url (does the tag '$ref' exist?)"
     download "$base_url/words/english.txt" "$tmp/english.txt" || fail "couldn't download the word list from $base_url"
