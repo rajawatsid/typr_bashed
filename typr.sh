@@ -129,6 +129,51 @@ update_typr() {
 
 }
 
+update_personal_best() {
+
+    local personal_best_file="$DATA_DIR/personal_best_${duration}"
+    local previous_best=0
+    local found=0
+    local session_date session_time session_duration session_wpm
+    local session_accuracy characters correct incorrect
+
+    if [[ -s $personal_best_file ]]; then
+        IFS= read -r previous_best < "$personal_best_file"
+        if [[ $previous_best =~ ^[0-9]+$ ]]; then
+            found=1
+        else
+            previous_best=0
+        fi
+    elif [[ -s $HISTORY_FILE ]]; then
+        while IFS=, read -r session_date session_time session_duration session_wpm \
+            session_accuracy characters correct incorrect; do
+            [[ $session_date == "date" ]] && continue
+            if [[ $session_duration == "$duration" && $session_wpm =~ ^[0-9]+$ ]]; then
+                if (( ! found || session_wpm > previous_best )); then
+                    previous_best=$session_wpm
+                    found=1
+                fi
+            fi
+        done < "$HISTORY_FILE"
+    fi
+
+    mkdir -p "$DATA_DIR" || return 1
+
+    if (( ! found )); then
+        printf '%s\n' "$wpm" > "$personal_best_file" || return 1
+        personal_best=$wpm
+        personal_best_status="first"
+    elif (( wpm > previous_best )); then
+        printf '%s\n' "$wpm" > "$personal_best_file" || return 1
+        personal_best=$wpm
+        personal_best_status="new"
+    else
+        personal_best=$previous_best
+        personal_best_status="same"
+    fi
+
+}
+
 save_session() {
 
     mkdir -p "$DATA_DIR" || {
@@ -782,7 +827,10 @@ else
     accuracy=0
 fi
 
+update_personal_best
 save_session
+
+sleep 3
 
 echo
 echo "=============================="
@@ -795,6 +843,14 @@ echo "Your WPM is ~$wpm"
 echo
 echo "Your accuracy is ~$accuracy%"
 echo
+
+if [[ $personal_best_status == "new" ]]; then
+    echo "You broke your score! Your new personal best is now $personal_best WPM!"
+elif [[ $personal_best_status == "first" ]]; then
+    echo "Your first personal best for ${duration} seconds is $personal_best WPM!"
+else
+    echo "Your personal best for ${duration} seconds is $personal_best WPM."
+fi
 
 while true; do
     echo
