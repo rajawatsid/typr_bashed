@@ -6,30 +6,13 @@ I think it should make it so that the user can type from a random assortment of 
 
 first we will make a set word and then it should type using that.
 
-## some sources
 Got the word list using:
 ```
 curl -L https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-no-swears.txt \
     -o words/english.txt
 ```
 
-## file structure to make
+## to install latest version
 ```
-typr/
-├── typr                  # main executable (entry point)
-├── lib/
-│   ├── ui.sh             # colors, cursor control, drawing, centering
-│   ├── input.sh          # key reading, escape sequences, backspace handling
-│   ├── game.sh           # the test loop, timer, scoring logic
-│   ├── words.sh          # loading word lists, picking random words
-│   ├── stats.sh          # WPM/accuracy math, saving and reading history
-│   ├── menu.sh           # menu and settings screens
-│   └── config.sh         # defaults, loading/saving user settings
-├── words/
-├── tests/
-│   └── test_stats.sh     # quick checks for your math functions
-├── install.sh            
-├── README.md
-├── LICENSE
-└── demo.gif
+curl -fsSL https://github.com/rajawatsid/typr_bashed/releases/latest/download/install.sh | bash
 ```
