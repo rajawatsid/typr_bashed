@@ -40,7 +40,7 @@ main() {
     if [[ -z $ref ]]; then
         download "https://api.github.com/repos/$repo/releases/latest" "$tmp/release.json" || fail "couldn't find the latest release"
 
-        ref="$(sed -n 's/^[[:space:]]*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' "$tmp/release.json" | head -n 1)"
+        ref="$(sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' "$tmp/release.json" | head -n 1)"
 
         [[ -n $ref ]] || fail "couldn't find the latest release tag"
     fi

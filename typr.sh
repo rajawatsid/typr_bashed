@@ -93,10 +93,12 @@ EOF
 }
 
 
+
 update_typr() {
 
     local installer
     local latest_version
+    local latest_release
     local current_version="${VERSION#v}"
 
     local repo="rajawatsid/typr_bashed"
@@ -110,12 +112,17 @@ update_typr() {
 
     echo "Checking for the latest version of typr..."
 
-    
-    latest_version=$(curl -fsSL \
+    # get the latest release information from github
+    latest_release=$(curl -fsSL \
         -H "Accept: application/vnd.github+json" \
         -H "User-Agent: typr" \
-        "$api_url" |
-        sed -n 's/^[[:space:]]*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p')
+        "$api_url") || {
+        echo "typr: couldn't get the latest release from github." >&2
+        return 1
+    }
+
+    latest_version=$(printf '%s\n' "$latest_release" |
+        sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p')
 
     if [[ -z $latest_version ]]; then
         echo "typr: couldn't find the latest version on github." >&2
@@ -131,7 +138,8 @@ update_typr() {
         return 0
     fi
 
-        cat << 'EOF'
+    # splash screen
+    cat << 'EOF'
  _    _  _____   _____       ___   _______  _______  ___    _   _____
 | |  | ||  _  \ |  __  \    / _ \ |__   __||__   __||   \  | | /  ___|
 | |  | || |_)  || |  \  \  / /_\ \   | |      | |   | |\ \ | ||  /  __
@@ -144,6 +152,7 @@ update_typr() {
                    |_|     |_| |_|     |_|  \_\
 
 EOF
+
     echo "                To v$latest_version"
     echo "==========================================================================="
     echo "A new version of typr is available!"
@@ -163,7 +172,6 @@ EOF
         return 1
     fi
 
-
     echo "Running the installer..."
 
     if bash "$installer"; then
@@ -177,6 +185,7 @@ EOF
     fi
 
 }
+
 
 update_personal_best() {
 
